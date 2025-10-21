@@ -1,0 +1,82 @@
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+
+    <!-- Top Fallback -->
+    <Fallback name="TopFallback">
+
+      <!-- Linkerkid: Parallel met network error en fallback -->
+      <Parallel name="NetworkAndMainParallel" success_threshold="1" failure_threshold="1">
+
+        <!-- Linkerkid: CheckNetworkError -->
+        <CheckNetworkError/>
+
+        <!-- Rechterkid: Fallback -->
+        <Fallback name="InnerFallback">
+
+          <!-- Linkerkid: Parallel met CheckCollision en bestaande MainFallback -->
+          <Parallel name="CollisionAndMainParallel" success_threshold="1" failure_threshold="1">
+
+            <!-- Linkerkid: CheckCollision -->
+            <CheckCollision/>
+
+            <!-- Rechterkid: bestaande MainFallback (je eerdere boom) -->
+            <Fallback name="MainFallback">
+
+              <!-- Eerste tak: originele boom -->
+              <Parallel name="RootParallel" success_threshold="1" failure_threshold="1">
+                <BatteryOk/>
+
+                <ForceSuccess name="RightBranch">
+                  <Sequence name="MainSequence">
+
+                    <Fallback name="CheckWorkingZone">
+                      <InWorkingZone/>
+                      <Sequence name="GoToWorkAreaSequence">
+                        <MoveLocationWorkarea/>
+                        <Check_at_workarea timeout="5.0"/>
+                      </Sequence>
+                    </Fallback>
+
+                    <RobotExplore/>
+                    <CheckCoordAvailable/>
+                    <MoveToVisitor/>
+                    <check_ArrivedAtPerson timeout="5.0"/>
+                    <robotAtPerson/>
+                    <CheckStartButton timeout="10.0"/>
+                    <DriveQuizLocation/>
+                    <IsRobotAtQuiz timeout = "200.0"/>
+                    <RobotAtQuiz/>
+                    <WaitQuizToEnd timeout="10.0"/>
+
+                  </Sequence>
+                </ForceSuccess>
+              </Parallel>
+
+              <!-- Tweede tak: wat te doen bij batterij failure -->
+              <Fallback name="GoToChargeFallback">
+                <InChargingStation/>
+                <Sequence name="GoToChargingSequence">
+                  <DriveToChargingStation/>
+                  <Check_At_ChargingStation timeout="5.0"/>
+                </Sequence>
+              </Fallback>
+
+            </Fallback>
+
+          </Parallel>
+
+          <!-- Rechterkid van InnerFallback: WaitDriving -->
+          <WaitDriving/>
+
+        </Fallback>
+
+      </Parallel>
+
+      <!-- Rechterkid van TopFallback: StopNode -->
+      <StopNode/>
+
+    </Fallback>
+
+  </BehaviorTree>
+</root>
+

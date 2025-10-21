@@ -21,7 +21,12 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'detection_node = ultralytics_ros2.detection_node:main',
+
+            #'detection_node = ultralytics_ros2.detection_node:main',
+
+
+            'visualFollowerROS = ultralytics_ros2.visualFollowerROS:main',
         ],
     },
 )
+
