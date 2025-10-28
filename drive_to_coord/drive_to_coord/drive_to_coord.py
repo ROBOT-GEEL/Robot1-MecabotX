@@ -1,10 +1,11 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped		# message type van /btDriveCoord
-from std_msgs.msg import String					# message type van /BehaviorTreeNode 
-from geometry_msgs.msg import Twist  			# message type van /cmd_vel
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
+from rclpy.time import Time
 
 
 class drive_to_coord(Node):
@@ -12,110 +13,87 @@ class drive_to_coord(Node):
 		super().__init__('drive_to_goal')
 
 		self.lastcoord = None
-		self.cmd_vel_pub = self.create_publisher(Twist,'/cmd_vel',1)
-		# maak het mogelijk te publishen op het /cmd_vel-topic
-		
-		self.driveCoordStatus_pub = self.create_publisher(String, '/driveCoordStatus', 1)
-		# maak het mogelijk te publishen op het /cmd_vel-topic
-		
-		self._action_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')	
-		# maak een client aan op de action-server 'navigate to pose
-		
-		# Maak een subscription aan op BTnode topic
+		self._goal_handle = None
+
+		self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 1)
+
+		self._action_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+
 		self.BTnode_sub = self.create_subscription(
-			String,						# type van het bericht
-			'/BehaviorTreeNode',			# topicnaam
-			self.handle_BTnode_callback,		# callbackfunctie
-			1								# queue size (aantal berichten bufferen)
+			String,
+			'/BehaviorTreeNode',
+			self.handle_BTnode_callback,
+			10
 		)
-		
-		# Maak een subscription aan op coordinate topic
+
 		self.coord_sub = self.create_subscription(
-			PoseStamped,					# type van het bericht
-			'/btDriveCoord',				# topicnaam
-			self.incomming_goal_callback, 	# callbackfunctie
-			1								# queue size (aantal berichten bufferen)
+			PoseStamped,
+			'/btDriveCoord',
+			self.incomming_goal_callback,
+			10
 		)
-		
+
 		self.get_logger().info('DriveToGoal node gestart.')
-		
+
 	def incomming_goal_callback(self, msg):
+		self.get_logger().info('coordinaat opgeslagen')
 		self.lastcoord = msg
-		
-			
+
 	def handle_BTnode_callback(self, msg: String):
+		self.get_logger().info("nieuw topic ontvangen")
 		data = msg.data.strip()
-		if data in ["btIsRobotAtQuiz", "drive"]:
+		if data in ["IsRobotAtQuiz", "drive"]:
 			self.send_goal()
 		else:
-			self.emergency_stop()
-	  	
+			self.get_logger().warn("Not a drive topic")
 
 	def send_goal(self):
-	
+
 		if self.lastcoord is None:
-			self.driveCoordStatus("failure")
-    		self.get_logger().warn("Geen coördinaat ontvangen, goal niet gestuurd!")
-    		return
-    
-		# Wacht tot nav2 klaar is
+			self.get_logger().warn("Geen coördinaat ontvangen, goal niet gestuurd!")
+			return
+
+		self.get_logger().info("send goal ontvangen")
+
 		self._action_client.wait_for_server()
-				
-		#self.last_coord = NavigateToPose.Goal()
-		#self.last_coord.pose.header.frame_id = 'map'
-		#self.last_coord.pose.header.stamp = self.get_clock().now().to_msg()
-		#self.last_coord.pose.pose.position.x = x
-		#self.last_coord.pose.pose.position.y = y
-		#self.last_coord.pose.pose.orientation.z = yaw  # eenvoudige yaw (niet correcte quaternion)
+		self.get_logger().info("nav klaar")
+
+		# Pose goed instellen
+		goal_pose = PoseStamped()
+		goal_pose.header.frame_id = 'base_link'
+		goal_pose.header.stamp = Time().to_msg()  # nu = 0 → laatste TF
+		goal_pose.pose = self.lastcoord.pose
 		
+		goal_pose.pose.position.x = 1.0  # 1 meter vooruit
+		goal_pose.pose.position.y = 0.0
+		goal_pose.pose.orientation.w = 1.0  # kijk dezelfde richting als robot
+
 		goal = NavigateToPose.Goal()
-		goal.pose = self.lastcoord
-		
+		goal.pose = goal_pose
+
+		# >>> HIER: werkelijk verzenden <<<
 		self._send_goal_future = self._action_client.send_goal_async(goal)
 		self._send_goal_future.add_done_callback(self.goal_response_callback)
+		self.get_logger().info("goal verstuurd naar Nav2, wacht op accept")
 		
 
-
 	def goal_response_callback(self, future):
-	
-		if goal_handle.accepted:
-			self.driveCoordStatus("rijden")
-		else:
-			self.driveCoordStatus("failure")
-
 		goal_handle = future.result()
+		if not goal_handle.accepted:
+			self.get_logger().warn("Goal NIET geaccepteerd door Nav2!")
+			return
+
+		self.get_logger().info("Goal geaccepteerd ✅")
+		self._goal_handle = goal_handle  # zodat cancel later kan
 
 		self._get_result_future = goal_handle.get_result_async()
 		self._get_result_future.add_done_callback(self.result_callback)
 
-
 	def result_callback(self, future):
-		self.driveCoordStatus("success")
-		
-		
-	def emergency_stop(self):
-		# 1) annuleer navigatie
-		if hasattr(self, '_goal_handle') and self._goal_handle is not None:
-			self._goal_handle.cancel_goal_async()
-			self.get_logger().warn("🚨 Navigatie geannuleerd!")
-
-		# 2) stuur directe stop naar motorcontrollers
-		stop_msg = Twist()
-		stop_msg.linear.x = 0.0
-		stop_msg.angular.z = 0.0
-		self.cmd_vel_pub.publish(stop_msg)
-		self.get_logger().warn("🛑 Robot onmiddellijk tot stilstand gebracht!")
-		
-		self.driveCoordStatus("failure")
+		result = future.result().status
+		self.get_logger().info(f"Goal afgewerkt, status: {result}")
 
 
-	def driveCoordStatus(self, status: str):
-		msg = String()
-		msg.data = status
-		self.driveCoordStatus_pub.publish(msg)
-		self.get_logger().info(f"[driveCoordStatus] {status}")
-
-		
 
 def main(args=None):
 	rclpy.init(args=args)
@@ -125,9 +103,8 @@ def main(args=None):
 		rclpy.spin(drive_to_coord_inst)
 
 	except KeyboardInterrupt:
-		drive_to_coord_inst.emergency_stop()
 		drive_to_coord_inst.get_logger().info('Afgebroken door gebruiker.')
-		
+
 	finally:
 		rclpy.shutdown()
 

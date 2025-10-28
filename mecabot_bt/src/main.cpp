@@ -228,60 +228,59 @@ private:
 
 
 
-// -------------------------
-// Stateful timer baseclass
-
 class TimedCondition : public BT::StatefulActionNode
 {
 public:
     TimedCondition(const std::string &name, const BT::NodeConfiguration &config)
-    : BT::StatefulActionNode(name, config), timeout_(7.0) {
-       {
-        // ROS2 node + publisher aanmaken
-        node_ = rclcpp::Node::make_shared("bt_" + name);
-        pub_ = node_->create_publisher<std_msgs::msg::String>("/BehaviorTreeNode", 10);
-    }}
+    : BT::StatefulActionNode(name, config), timeout_(7.0)
+    {
+    }
 
-    static BT::PortsList providedPorts() {
+    static BT::PortsList providedPorts()
+    {
         return { BT::InputPort<double>("timeout") };
     }
 
-    BT::NodeStatus onStart() override {
+    BT::NodeStatus onStart() override
+    {
         // haal timeout uit XML, default 7s
-        if (!getInput<double>("timeout", timeout_)) {
+        if (!getInput<double>("timeout", timeout_))
+        {
             timeout_ = 7.0;
         }
-                std_msgs::msg::String msg;
-        msg.data = name();
-        pub_->publish(msg);
+
         start_time_ = std::chrono::steady_clock::now();
         std::cout << "[" << name() << "] START with timeout = " << timeout_ << "s" << std::endl;
+
         return BT::NodeStatus::RUNNING;
     }
 
-    BT::NodeStatus onRunning() override {
+    BT::NodeStatus onRunning() override
+    {
         auto elapsed = std::chrono::duration<double>(
             std::chrono::steady_clock::now() - start_time_).count();
 
         std::cout << "[" << name() << "] Running... (" << elapsed << "s)" << std::endl;
 
-        if (elapsed >= timeout_) {
+        if (elapsed >= timeout_)
+        {
             std::cout << "[" << name() << "] Timeout reached " << std::endl;
             return BT::NodeStatus::SUCCESS;
         }
+
         return BT::NodeStatus::RUNNING;
     }
 
-    void onHalted() override {
+    void onHalted() override
+    {
         std::cout << "[" << name() << "] HALTED" << std::endl;
     }
 
 protected:
     double timeout_;
     std::chrono::steady_clock::time_point start_time_;
-    rclcpp::Node::SharedPtr node_;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_;
 };
+
 
 class InWorkingZone : public BT::SyncActionNode
 {
