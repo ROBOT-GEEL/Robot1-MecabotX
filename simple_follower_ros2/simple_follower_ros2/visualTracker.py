@@ -34,8 +34,8 @@ class PeopleFollowerNode(Node):
 
         # Depth handling
         self.declare_parameter('depth_scale', 1.0)         # multiply raw depth to get meters
-        self.declare_parameter('min_valid_distance', 0.2)  # m
-        self.declare_parameter('max_valid_distance', 5.0)  # m
+        self.declare_parameter('min_valid_distance', 0.5)  # m
+        self.declare_parameter('max_valid_distance', 10.0)  # m
         self.declare_parameter('patch_radius_px', 6)       # sampling patch radius
 
         # OUTPUT conventions (to match your controller)

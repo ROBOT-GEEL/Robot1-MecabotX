@@ -27,7 +27,7 @@ class VisualFollower(Node):
         self.declare_parameter('stop_on_shutdown', True)
         self.declare_parameter('stop_repeats', 5)        # send stop N times
         self.declare_parameter('stop_interval', 0.05)    # seconds between stops
-        self.declare_parameter('position_timeout_s', 0.5)# watchdog timeout on Position stream
+        self.declare_parameter('position_timeout_s', 1)# watchdog timeout on Position stream
 
         self.stop_on_shutdown = bool(self.get_parameter('stop_on_shutdown').value)
         self.stop_repeats     = int(self.get_parameter('stop_repeats').value)
@@ -105,7 +105,7 @@ class VisualFollower(Node):
         velocity.angular.z = angularSpeed
 
         # guard: if distance invalid or too far, stop
-        if (distance > 2000) or (distance == 0):
+        if (distance > 20000) or (distance == 0):
             self.stopMoving()
             self.get_logger().debug('Out of tracking range; stopping.')
         else:
