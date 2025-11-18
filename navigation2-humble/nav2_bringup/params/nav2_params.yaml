@@ -254,6 +254,18 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
         inflation_radius: 0.55
+        
+        # Nieuwe virtuele obstakel layer
+	  virtual_layer:
+		plugin: "nav2_costmap_2d::ObstacleLayer"
+		enabled: True
+		observation_sources: virtual_obstacles
+		virtual_obstacles:
+		  topic: /virtual_obstacles
+		  max_obstacle_height: 2.0
+		  clearing: False      # muren blijven
+		  marking: True
+		  data_type: "PointCloud2"
       always_send_full_costmap: True
 
 map_server:
