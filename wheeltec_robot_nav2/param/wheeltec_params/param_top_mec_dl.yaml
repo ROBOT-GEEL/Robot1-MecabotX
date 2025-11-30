@@ -255,7 +255,7 @@ local_costmap:
           marking: True                             #是否启用障碍物标记功能
           data_type: "LaserScan"                    #数据类型
           raytrace_max_range: 10.0                  #控制光线追踪从代价地图中清除障碍物的最大范围 
-          raytrace_min_range: 0.0                  #控制光线追踪从代价地图中清除障碍物的最大范围 
+          raytrace_min_range: 0.0                   #控制光线追踪从代价地图中清除障碍物的最大范围 
           obstacle_max_range: 2.5                   #控制代价地图上标记障碍物的最大范围
           obstacle_min_range: 0.0                   #控制代价地图上标记障碍物的最小范围
 
@@ -301,6 +301,7 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"  #膨胀层插件
         cost_scaling_factor: 3.0                   #成本缩放因子，决定障碍物成本随距离的递减速度。
         inflation_radius: 0.45                     #膨胀半径
+
       always_send_full_costmap: True               #是否每次更新时都发送完整的成本图，而不是更新
   global_costmap_client:
     ros__parameters:

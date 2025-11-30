@@ -19,47 +19,63 @@
             <!-- Linkerkid: CheckCollision -->
             <CheckCollision/>
 
-            <!-- Rechterkid: bestaande MainFallback (je eerdere boom) -->
-            <Fallback name="MainFallback">
+            <Fallback name="BatteryLowFallback">
 
-              <!-- Eerste tak: originele boom -->
+              <!-- Linkerkid: Parallel RootParallel -->
               <Parallel name="RootParallel" success_threshold="1" failure_threshold="1">
+                <!-- Linkerkid: BatteryOk -->
                 <BatteryOk/>
 
-                <ForceSuccess name="RightBranch">
-                  <Sequence name="MainSequence">
+                <!-- Rechterkind: ForceSuccess op de Fallback MainFallback -->
+                <ForceSuccess name="MainFallbackForceSuccess">
+                  <Fallback name="MainFallback">
+                    <!-- Linkerkind: MainSequence -->
+                    <Sequence name="MainSequence">
+                      <Fallback name="CheckWorkingZone">
+                        <CheckInWorkingZone robotLocation="{robotLocation}"/>
+                        <Sequence name="GoToWorkAreaSequence">
+                          <DriveWorkArea workarea_timestamp = "{workarea_timestamp}" timeout="5.0"/>
+                          <IsRobotAtWorkArea workarea_timestamp = "{workarea_timestamp}" timeout="200.0"/>
+                        </Sequence>
+                      </Fallback>
 
-                    <Fallback name="CheckWorkingZone">
-                      <InWorkingZone/>
-                      <Sequence name="GoToWorkAreaSequence">
-                        <MoveLocationWorkarea/>
-                        <Check_at_workarea timeout="5.0"/>
-                      </Sequence>
-                    </Fallback>
+                      <RobotExplore robotLocation="{robotLocation}"/>
+			<LoopSequence name="LoopSequence">
+				<Sequence name="FollowMeSequence">
+				    <StartDrivingToPeople timeout="5.0"/>
+				    <CheckingNearbyVisitors/>
+				    <ArrivedAtVisitors timeout="5.0" />
+				</Sequence>  
+			</LoopSequence>
 
-                    <RobotExplore/>
-                    <CheckCoordAvailable/>
-                    <MoveToVisitor/>
+                      <DriveQuizLocation 
+			    timeout="5.0" 
+			    x="5.0" 
+			    y="12.5" 
+			    z="0.0"
+			    sent_timestamp="{quiz_timestamp}" />
+                      <IsRobotAtQuiz timeout="200.0" sent_timestamp="{quiz_timestamp}" />
+                      <RobotAtQuiz robotLocation="{robotLocation}"/>
+                      <WaitQuizToEnd timeout="5.0"/>
+                    </Sequence>
 
-                    <robotAtPerson/>
-                    <CheckStartButton timeout="10.0"/>
-                    <DriveQuizLocation/>
-                    <check_ArrivedAtPerson timeout="15.0"/>
-                    <IsRobotAtQuiz timeout = "200.0"/>
-                    <RobotAtQuiz/>
-                    <WaitQuizToEnd timeout="10.0"/>
-
-                  </Sequence>
+                    <!-- Rechterkind van MainFallback -->
+                    <MainBTStopDrive stop_flag="{stop_flag}"/>
+                  </Fallback>
                 </ForceSuccess>
               </Parallel>
 
-              <!-- Tweede tak: wat te doen bij batterij failure -->
+              <!-- Rechterkind: bestaande Battery fallback (GoToChargeFallback) -->
               <Fallback name="GoToChargeFallback">
-                <InChargingStation/>
-                <Sequence name="GoToChargingSequence">
-                  <DriveToChargingStation/>
-                  <Check_At_ChargingStation timeout="5.0"/>
+                <Sequence name="ChargingSequence">
+                  <CheckMainBTErrorState stop_flag="{stop_flag}"/>
+                  <DriveToChargingStation timeout="5.0"/>
+                  <StatusDriveToChargingDock timeout="5.0"/>
+                  <IsRobotCharging timeout="200"/>
+                  <IsBatteryFull robotLocation="{robotLocation}"/>
+                  <BatteryCharged timeout="5"/>
                 </Sequence>
+                <BatteryStopDrive/>
               </Fallback>
 
             </Fallback>
